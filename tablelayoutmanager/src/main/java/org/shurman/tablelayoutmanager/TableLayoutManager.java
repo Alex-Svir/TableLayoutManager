@@ -26,6 +26,7 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
 
     @Override
     public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
+        l("onLayoutChildren");
         if (state.didStructureChange()) {
             remeasureTable(recycler, state);
         }
@@ -74,16 +75,16 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
 //=========================================================================================================================
 
     private int mRows, mColumns, mCount;
-    private final FixedBorder[] mBorders = new FixedBorder[]
+    /*private*/ final FixedBorder[] mBorders = new FixedBorder[]
                     {new FixedBorder(), new FixedBorder(), new FixedBorder(), new FixedBorder()};
-    private final ScrollArea mScrollArea = new ScrollArea();
-    private final InnerFrame mFrame = new InnerFrame();
+    /*private*/ final ScrollArea mScrollArea = new ScrollArea();
+    /*private*/ final InnerFrame mFrame = new InnerFrame();
 
     private void setTableDimensions(int columns, int rows, int topBorder, int leftBorder, int rightBorder, int bottomBorder) {
-        assertion(columns >= 0 && rows >= 0
-                        && topBorder >= 0 && leftBorder >= 0 && rightBorder >= 0 && bottomBorder >= 0
-                        && topBorder + bottomBorder <= rows && leftBorder + rightBorder <= columns,
-                "Illegal Table Layout initialization values");
+        assert (columns >= 0 && rows >= 0
+                && topBorder >= 0 && leftBorder >= 0 && rightBorder >= 0 && bottomBorder >= 0
+                && topBorder + bottomBorder <= rows && leftBorder + rightBorder <= columns)
+                : "Illegal Table Layout initialization values";
         mCount = columns * rows;
         mColumns = columns;
         mRows = rows;
@@ -272,8 +273,10 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
                 if (ptr >= count) return;
                 final View view = recycler.getViewForPosition(ptr);
                 measureChildWithMargins(view, 0, 0);
-                widthReg.register(view.getMeasuredWidth(), col, row);
-                heightReg.register(view.getMeasuredHeight(), col, row);
+                //widthReg.register(view.getMeasuredWidth(), col, row);
+                widthReg.register(getDecoratedMeasuredWidth(view), col, row);
+                //heightReg.register(view.getMeasuredHeight(), col, row);
+                heightReg.register(getDecoratedMeasuredHeight(view), col, row);
             }
         }
     }
@@ -300,16 +303,18 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
             top = bottom;
         }
     }
-//--------------------------------------------------------------------------------------------------
-    private static final int TOP = 0;
-    private static final int LEFT = 1;
-    private static final int RIGHT = 2;
-    private static final int BOTTOM = 3;
 
-    private static class FixedBorder {
+
+//--------------------------------------------------------------------------------------------------
+    /*private*/ static final int TOP = 0;
+    /*private*/ static final int LEFT = 1;
+    /*private*/ static final int RIGHT = 2;
+    /*private*/ static final int BOTTOM = 3;
+
+    /*private*/ static class FixedBorder {
         private int levels;
-        private int pixels;
-        private final List<Integer> sizes;
+        /*private*/ int pixels;
+        /*private*/ final List<Integer> sizes;
         private FixedBorder() {
             levels = 0;
             pixels = 0;
@@ -323,7 +328,7 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
         private void calcPixels() { pixels = sizes.stream().mapToInt(i -> i).sum(); }
     }
 
-    private static class ScrollArea {
+    /*private*/ static class ScrollArea {
         int rows, columns;
         int topRow, bottomRow, leftCol, rightCol;
         int cellWidth, cellHeight;
@@ -345,9 +350,9 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
         private int height() { return rows * cellHeight; }
     }
 
-    private class InnerFrame {
+    /*private*/ class InnerFrame {
         private int widthPx, heightPx;
-        private int topRow, bottomRow, leftCol, rightCol;
+        /*private*/ int topRow, bottomRow, leftCol, rightCol;
         int topOutFrameOffset, leftOutFrameOffset;
 
         private void locate() {
@@ -402,15 +407,6 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
 
     private interface ContraMeasurer {
         int diff(int column, int row);
-    }
-
-    private static void assertion(boolean condition, String message) {
-        if (condition) return;
-        throw new IllegalStateException(message);
-    }
-
-    private static void assertion(boolean condition) {
-        assertion(condition, "Illegal state of TableLayoutManager");
     }
 //==================================================================================================
     private static void l(String text) { Log.d("LOG_TAG::", text); }
