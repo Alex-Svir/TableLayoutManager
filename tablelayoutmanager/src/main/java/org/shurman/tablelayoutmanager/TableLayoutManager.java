@@ -19,6 +19,8 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
         reset(columns, rows, topBorder, leftBorder, rightBorder, bottomBorder);
     }
 
+    public TableLayoutManager() { this(0, 0, 0, 0, 0, 0); }
+
     public void reset(int columns, int rows, int topBorder, int leftBorder, int rightBorder, int bottomBorder) {
         setTableDimensions(columns, rows, topBorder, leftBorder, rightBorder, bottomBorder);
         //remeasureTable()?
