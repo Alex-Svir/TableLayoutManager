@@ -18,6 +18,7 @@ public class SimpleCellBordersDecoration extends RecyclerView.ItemDecoration {
     private int mLineWidth;
 
     public SimpleCellBordersDecoration(int lineWidth, int color) {
+        assert lineWidth >= 0 : "Line width must be non-negative";
         mPaint = new Paint();
         setLineWidth(lineWidth);
         mPaint.setColor(color);
@@ -36,24 +37,28 @@ public class SimpleCellBordersDecoration extends RecyclerView.ItemDecoration {
 
     @Override
     public void getItemOffsets(@NonNull Rect outRect, @NonNull View view, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
-        int sz = mLineWidth / 2;
-        outRect.set(sz,sz,sz,sz);
+        TableLayoutManager tlm = state.get(TableLayoutManager.STATE_RESID_TLM);
+        int columns = tlm.mColumns;
+        int rows = tlm.mRows;
+        int idx = parent.getChildLayoutPosition(view);
+        int sz = mLineWidth >> 1;
+        outRect.set(
+                idx % columns   ==  0                       ?   mLineWidth : sz,    //  left
+                idx             <   columns                 ?   mLineWidth : sz,    //  top
+                idx % columns   ==  (columns - 1)           ?   mLineWidth : sz,    //  right
+                idx             >=  (columns * (rows - 1))  ?   mLineWidth : sz     //  bottom
+        );
     }
 
     @Override
     public void onDrawOver(@NonNull Canvas c, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
-        super.onDrawOver(c, parent, state);
-        RecyclerView.LayoutManager lm = parent.getLayoutManager();
-        if (!(lm instanceof TableLayoutManager))
-            return;
-        TableLayoutManager tlm = (TableLayoutManager) lm;
+        TableLayoutManager tlm = state.get(TableLayoutManager.STATE_RESID_TLM);
 
         int w = parent.getWidth();
         int h = parent.getHeight();
 
         //  frame
-        //  TODO    outer frame should be mLineWidth / 4, now it eats outer borders; inset parent RecyclerView by paddings?
-        int d = mLineWidth / 2;
+        int d = mLineWidth >> 1;
         c.drawLine(0, d, w, d, mPaint);                         //  top
         c.drawLine(0, h - d, w, h - d, mPaint);     //  bottom
         c.drawLine(d,0, d, h, mPaint);                          //  left

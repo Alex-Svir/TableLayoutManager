@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 public class TableLayoutManager extends RecyclerView.LayoutManager {
+    static final int STATE_RESID_TLM = 101;
+
     private final Scroller scrollHor = new Scroller();
     private final Scroller scrollVert = new Scroller();
 
@@ -29,6 +31,7 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
     @Override
     public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
         l("onLayoutChildren");
+        state.put(STATE_RESID_TLM, this);
         if (state.didStructureChange()) {
             remeasureTable(recycler, state);
         }
@@ -76,7 +79,7 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
 //*************************************************************************************************************************
 //=========================================================================================================================
 
-    private int mRows, mColumns, mCount;
+    /*private*/ int mRows, mColumns, mCount;
     /*private*/ final FixedBorder[] mBorders = new FixedBorder[]
                     {new FixedBorder(), new FixedBorder(), new FixedBorder(), new FixedBorder()};
     /*private*/ final ScrollArea mScrollArea = new ScrollArea();
@@ -96,8 +99,8 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
         mBorders[BOTTOM].set(bottomBorder);
         mScrollArea.set(mBorders[TOP].levels,
                         mBorders[LEFT].levels,
-                mColumns - mBorders[RIGHT].levels - 1,
-                mRows - mBorders[BOTTOM].levels - 1);
+                mColumns - 1 - mBorders[RIGHT].levels,
+                mRows - 1 - mBorders[BOTTOM].levels);
     }
 
     private void remeasureTable(RecyclerView.Recycler recycler, RecyclerView.State state) {
