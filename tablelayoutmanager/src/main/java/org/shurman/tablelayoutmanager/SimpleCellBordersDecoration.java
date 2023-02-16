@@ -75,9 +75,11 @@ public class SimpleCellBordersDecoration extends RecyclerView.ItemDecoration {
         //  scroll area
         y += tlm.mScrollArea.cellHeight - tlm.mFrame.topOutFrameOffset;
         int endBorderBound = h - tlm.mBorders[TableLayoutManager.BOTTOM].pixels;
-        while (y < endBorderBound) {
-            c.drawLine(0, y, w, y, mPaint);
-            y += tlm.mScrollArea.cellHeight;
+        if (!tlm.mScrollArea.empty()) {
+            while (y < endBorderBound) {
+                c.drawLine(0, y, w, y, mPaint);
+                y += tlm.mScrollArea.cellHeight;
+            }
         }
 
         border = tlm.mBorders[TableLayoutManager.BOTTOM].sizes;
@@ -97,9 +99,11 @@ public class SimpleCellBordersDecoration extends RecyclerView.ItemDecoration {
         //  scroll area
         x += tlm.mScrollArea.cellWidth - tlm.mFrame.leftOutFrameOffset;
         endBorderBound = w - tlm.mBorders[TableLayoutManager.RIGHT].pixels;
-        while (x < endBorderBound) {
-            c.drawLine(x, 0, x, h, mPaint);
-            x += tlm.mScrollArea.cellWidth;
+        if (!tlm.mScrollArea.empty()) {
+            while (x < endBorderBound) {
+                c.drawLine(x, 0, x, h, mPaint);
+                x += tlm.mScrollArea.cellWidth;
+            }
         }
 
         border = tlm.mBorders[TableLayoutManager.RIGHT].sizes;

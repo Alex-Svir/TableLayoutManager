@@ -350,7 +350,7 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
             rows = bottomRow - topRow + 1;
             columns = rightCol - leftCol + 1;
         }
-        private boolean empty() {return rows == 0 || columns == 0;}
+        /*private*/ boolean empty() {return rows == 0 || columns == 0;}
         private int width() { return columns * cellWidth; }
         private int height() { return rows * cellHeight; }
     }
