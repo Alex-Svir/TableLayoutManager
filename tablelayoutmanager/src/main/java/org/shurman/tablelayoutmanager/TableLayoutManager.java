@@ -135,8 +135,8 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
                     (m, c, r) -> {if (m > mBorders[BOTTOM].sizes.get(r)) mBorders[BOTTOM].sizes.set(r, m);});
 
         if (mScrollArea.empty()) {
-            mFrame.widthPx = 0;
-            mFrame.heightPx = 0;
+            mFrame.measure(0, 0);
+            adjustMeasurements();
             scrollHor.reset(0);
             scrollVert.reset(0);
             return;
@@ -172,7 +172,6 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
                     (m, c, r) -> {if (m > mBorders[BOTTOM].sizes.get(r)) mBorders[BOTTOM].sizes.set(r, m);});
 
         IntStream.range(0, 4).forEach(i -> mBorders[i].calcPixels());
-        //todo squeeze/adapt
 
         measureRegion(recycler, state,
                 mColumns * mBorders[TOP].levels + mBorders[LEFT].levels,
@@ -181,10 +180,163 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
                 (m, c, r) -> {if (mScrollArea.cellWidth < m) mScrollArea.cellWidth = m;},
                 (m, c, r) -> {if (mScrollArea.cellHeight < m) mScrollArea.cellHeight = m;});
 
-        mFrame.widthPx = getWidth() - mBorders[LEFT].pixels - mBorders[RIGHT].pixels;
-        mFrame.heightPx = getHeight() - mBorders[TOP].pixels - mBorders[BOTTOM].pixels;
+        mFrame.measure(getWidth() - mBorders[LEFT].pixels - mBorders[RIGHT].pixels,
+                        getHeight() - mBorders[TOP].pixels - mBorders[BOTTOM].pixels);
+        adjustMeasurements();
         scrollHor.reset(mScrollArea.width() - mFrame.widthPx);
         scrollVert.reset(mScrollArea.height() - mFrame.heightPx);
+    }
+
+    private void adjustMeasurements() {       //  TODO    TODO    POLICY
+        if (mScrollArea.empty()) {
+            int bordersSum = mBorders[LEFT].pixels + mBorders[RIGHT].pixels;
+            int limit = getWidth();
+            if (bordersSum > limit) {
+                //  POLICY:     ignore OR squeeze to junction
+                resizeBorders(mBorders[LEFT], mBorders[RIGHT], limit);
+                l(">>>___Horizontal borders overlay");
+            } else if (bordersSum < limit) {
+                //  POLICY:     pump to junction OR tetris
+                resizeBorders(mBorders[LEFT], mBorders[RIGHT], limit);
+                l(">>>___Horizontal borders diastasis");
+            }
+            bordersSum = mBorders[TOP].pixels + mBorders[BOTTOM].pixels;
+            limit = getHeight();
+            if (bordersSum > limit) {
+                //  POLICY:     ignore OR squeeze to junction
+                resizeBorders(mBorders[TOP], mBorders[BOTTOM], limit);
+                l(">>>___Vertical borders overlay");
+            } else if (bordersSum < limit) {
+                //  POLICY:     pump to junction OR tetris
+                resizeBorders(mBorders[TOP], mBorders[BOTTOM], limit);
+                l(">>>___Vertical borders diastasis");
+            }
+            return;
+        }
+
+        int minFrame = calcMinFrameWidth();
+        if (mFrame.widthPx < 0) {
+            //  POLICY:     ignore OR squeeze to minFrame OR junction??
+            resizeBorders(mBorders[LEFT], mBorders[RIGHT], minFrame);
+            l(">>>__>>Horizontal borders overlay");
+        } else if (mFrame.widthPx == 0) {
+            //  POLICY:     ignore OR squeeze to minFrame
+            resizeBorders(mBorders[LEFT], mBorders[RIGHT], minFrame);
+            l(">>>__>>Horizontal borders joint");
+        } else {        //  frame.width > 0
+            if (mFrame.widthPx < minFrame) {
+                //  POLICY:     ignore OR squeeze to minFrame OR pump to junction????!!
+                resizeBorders(mBorders[LEFT], mBorders[RIGHT], minFrame);
+                l(">>>__>>Scrollable frame clipped horizontally");
+            } else if (mFrame.widthPx > mScrollArea.width()) {
+                //  POLICY:     pump borders OR scrollArea OR both OR tetris
+                float k = (float) getWidth() / (float) (mBorders[LEFT].pixels + mScrollArea.width() + mBorders[RIGHT].pixels);
+                int newScrollArea = resizeScrollAreaHorizontally(k);
+                resizeBorders(mBorders[LEFT], mBorders[RIGHT], getWidth() - newScrollArea);
+                l(">>>__>>Scrollable Area too small horizontally");
+            }
+        }
+        minFrame = calcMinFrameHeight();
+        if (mFrame.heightPx < 0) {
+            //  POLICY:     ignore OR squeeze to minFrame OR junction??
+            resizeBorders(mBorders[TOP], mBorders[BOTTOM], minFrame);
+            l(">>>__>>Vertical borders overlay");
+        } else if (mFrame.heightPx == 0) {
+            //  POLICY:     ignore OR squeeze to minFrame
+            resizeBorders(mBorders[TOP], mBorders[BOTTOM], minFrame);
+            l(">>>__>>Vertical borders joint");
+        } else {        //  frame.height > 0
+            if (mFrame.heightPx < minFrame) {
+                //  POLICY:     ignore OR squeeze to minFrame OR pump to junction????!!
+                resizeBorders(mBorders[TOP], mBorders[BOTTOM], minFrame);
+                l(">>>__>>Scrollable frame clipped vertically");
+            } else if (mFrame.heightPx > mScrollArea.height()) {
+                //  POLICY:     pump borders OR scrollArea OR both OR tetris
+                float k = (float) getHeight() / (float) (mBorders[TOP].pixels + mScrollArea.height() + mBorders[BOTTOM].pixels);
+                int newScrollArea = resizeScrollAreaVertically(k);
+                resizeBorders(mBorders[TOP], mBorders[BOTTOM], getHeight() - newScrollArea);
+                l(">>>__>>Scrollable Area too small vertically");
+            }
+        }
+        mFrame.measure(getWidth() - mBorders[LEFT].pixels - mBorders[RIGHT].pixels,
+                        getHeight() - mBorders[TOP].pixels - mBorders[BOTTOM].pixels);
+    }
+    private int calcMinFrameWidth() { return mScrollArea.columns > 1 ? mScrollArea.cellWidth * 2 : mScrollArea.cellWidth; }     //  TODO    POLICY?
+    private int calcMinFrameHeight() { return mScrollArea.rows > 1 ? mScrollArea.cellHeight * 2 : mScrollArea.cellHeight; }     //  TODO    POLICY?
+
+    private int resizeScrollAreaVertically(float k) {
+        mScrollArea.cellHeight *= k;
+        return mScrollArea.height();
+    }
+    private int resizeScrollAreaHorizontally(float k) {
+        mScrollArea.cellWidth *= k;
+        return mScrollArea.width();
+    }
+    private int resizeScrollAreaVertically(int newHeight) {
+        int h = mScrollArea.height();
+        if (h == 0) return 0;
+        return resizeScrollAreaVertically((float) newHeight / (float) h);
+    }
+    private int resizeScrollAreaHorizontally(int newWidth) {
+        int w = mScrollArea.width();
+        if (w == 0) return 0;
+        return resizeScrollAreaHorizontally((float) newWidth / (float) w);
+    }
+    private static void resizeBorders(FixedBorder startBorder, FixedBorder endBorder, int newSize) {
+        int oldSize = startBorder.pixels + endBorder.pixels;
+        if (oldSize == 0) return;
+        float k = (float) newSize / (float) oldSize;
+        int d = newSize - resizeBorder(startBorder, k) - resizeBorder(endBorder, k);
+        if (d > 0) { l(">>>>>>>\tSpread pixels on borders: " + d);                //  TODO    TODO  STUB
+            int base = d / (startBorder.levels + endBorder.levels);
+            int extra = d % (startBorder.levels + endBorder.levels);
+            fineTunePumpSTUB(endBorder, base, fineTunePumpSTUB(startBorder, base, extra));
+        }
+        else if (d < 0) { l(">>>>>>>>>\tPick pixels from borders: " + d);       //  TODO    TODO  STUB
+            fineTuneSqueezeSTUB(startBorder, endBorder, Math.min(startBorder.pixels + endBorder.pixels, -d));
+        }
+    }
+    private static int resizeBorder(FixedBorder border, float k) {
+        int px = 0;
+        for (int i = 0; i < border.levels; ++i) {
+            int val = (int) (border.sizes.get(i) * k);
+            px += val;
+            border.sizes.set(i, val);
+        }
+        return border.pixels = px;
+    }
+    private static int fineTunePumpSTUB(FixedBorder border, int base, int extra) {      //  TODO    TODO    STUB
+        int idx = 0;
+        while (extra > 0 && idx < border.levels) {
+            border.sizes.set(idx, border.sizes.get(idx) + base + 1);
+            ++idx;
+            --extra;
+        }
+        if (base > 0) {
+            while (idx < border.levels) {
+                border.sizes.set(idx, border.sizes.get(idx) + base);
+                ++idx;
+            }
+        }
+        return extra;
+    }
+    private static void fineTuneSqueezeSTUB(FixedBorder start, FixedBorder end, int n) { //  TODO    TODO   STUB
+        while (n > 0) {
+            for (int i = 0; i < start.levels; ++i) {
+                int val = start.sizes.get(i);
+                if (val > 0) {
+                    start.sizes.set(i, val - 1);
+                    if (--n == 0) return;
+                }
+            }
+            for (int i = 0; i < end.levels; ++i) {
+                int val = end.sizes.get(i);
+                if (val > 0) {
+                    end.sizes.set(i, val - 1);
+                    if (--n == 0) return;
+                }
+            }
+        }
     }
 
     private void layoutTable(RecyclerView.Recycler recycler, RecyclerView.State state) {
@@ -360,7 +512,13 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
         /*private*/ int topRow, bottomRow, leftCol, rightCol;
         int topOutFrameOffset, leftOutFrameOffset;
 
+        private void measure(int w, int h) {
+            widthPx = w;
+            heightPx = h;
+        }
+
         private void locate() {
+            //assert
             int horScrollPosition = TableLayoutManager.this.scrollHor.getPosition();
             int vertScrollPosition = TableLayoutManager.this.scrollVert.getPosition();
             leftCol = horScrollPosition / TableLayoutManager.this.mScrollArea.cellWidth
@@ -391,7 +549,7 @@ public class TableLayoutManager extends RecyclerView.LayoutManager {
             reset(0);
         }
         public void reset(int range) {
-            maxScroll = range;
+            maxScroll = Math.max(range, 0);
             currentScroll = minScroll;                    //      TODO        savedInstanceState
             scrollable = maxScroll > minScroll;
         }
